@@ -30,6 +30,8 @@ class dataset:
         
         self.validation = []
         
+        self.training_features = []
+                
         
     ##########################
     ### Define what to do to NA, NaN and Inf values
@@ -79,7 +81,6 @@ class dataset:
     ### separate sets
     #########################
     
-   
     
     def split_sets(self, use_cluster, training_size, external_size):
        #### use_cluster - use clustering for creating the test set, if True, previous clustering analysis must be carried out
@@ -131,27 +132,35 @@ class dataset:
                     self.validation = validation[0], validation[1]
                   
                
-    
-            
+         
             
     #########################
     ### calculate descriptors
-    #########################
+    #########################    
 
-    
-    def calculate_descriptors_training(self):
+    def calculate_features_training(self, feature_type):
+            
+        def calculate_mordred_training(self):
+            
+        ### Calculate descriptors for training set
+            
+            mol_array = [rd.Chem.MolFromSmiles(m, sanitize=True) for m in self.training[0]]
+            calc = Calculator(descriptors, ignore_3D=True)
+            return calc.pandas(mol_array)
         
-    ### Calculate descriptors for training set
+        #### check feature type
+        if feature_type in ['mordred','amino']:
+            if feature_type == 'mordred':
+                self.training_features = calculate_mordred_training(self)
         
-        mol_array = [rd.Chem.MolFromSmiles(m, sanitize=True) for m in self.molecule]
-        calc = Calculator(descriptors, ignore_3D=True)
-        desc_mol_array = calc.pandas(mol_array)    
-
         
-
 bla = dataset(compounds)
 bla.na_action('zero')
 bla.binarize(30)
 bla.log_y()
 
 bla.split_sets(False, 0.7, 0.1)
+bla.training[0]
+bla.calculate_features_training('mordred')
+
+bla.training_features
