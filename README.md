@@ -7,4 +7,4 @@ Easy applicability domain analysis, Machine learning and QSAR on HTC and virtual
 
 The pipeline was originally used in:
 
-MACHADO, L. A., KREMPSER, E., AND GUIMARÃES, A. C. R., A MACHINE LEARNING‑BASED VIRTUAL SCREENING FOR NATURAL COMPOUNDS CAPABLE OF INHIBITING THE HIV‑1 INTEGRASE. FRONTiERS IN DRUG DISCOVERY (2022)
+MACHADO, L. A., KREMPSER, E., AND GUIMARÃES, A. C. R., A machine learning-based virtual screening for natural compounds capable of inhibiting the HIV-1 integrase. Frontiers in Drug Discovery (2022)
