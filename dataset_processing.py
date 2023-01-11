@@ -5,24 +5,43 @@ Spyder Editor
 This is a temporary script file.
 """
 
-import pandas as pd
-import numpy as np
+
+### computational chemistry stuff
 import rdkit as rd
-import argparse
 from mordred import Calculator
 from mordred import descriptors
+
+### Pandas, random and numpy
+import pandas as pd
+import numpy as np
 from random import sample
-from sklearn.model_selection import train_test_split
+
 from numpy.random import randint
+
+from math import isnan
+
+### Plot
+from matplotlib import pyplot
+from mpl_toolkits.mplot3d import Axes3D
+from matplotlib import pyplot as plt
+
+
+### SKlearn
 from sklearn.preprocessing import MinMaxScaler
 from sklearn.preprocessing import StandardScaler
 from sklearn.cluster import KMeans
 from sklearn.decomposition import PCA
 from sklearn.metrics import silhouette_score
 from sklearn.model_selection import ParameterGrid
-from matplotlib import pyplot
-from mpl_toolkits.mplot3d import Axes3D
-from matplotlib import pyplot as plt
+from sklearn.feature_selection import SelectKBest 
+from sklearn.feature_selection import chi2
+from sklearn.feature_selection import f_classif
+from sklearn.feature_selection import f_regression
+from sklearn.feature_selection import mutual_info_regression
+from sklearn.feature_selection import mutual_info_classif
+from sklearn.model_selection import train_test_split
+
+
 
 compounds = pd.read_csv("~/virtual_screening_pipeline/compounds2.csv")
 
@@ -87,7 +106,35 @@ def solve_non_numeric(feature_dataframe, na_action):
                 
     return norm
     
-
+def detect_correlated(data, threshold):
+    
+    cormat=np.corrcoef(np.transpose(data))
+    for i in range(np.shape(cormat)[0]):
+        for j in range(np.shape(cormat)[1]):
+            if isnan(cormat[i,j]):
+                cormat[i,j] = 0
+            
+            if i == j:
+                cormat[i,j] = 0
+    
+    redundant = []
+    
+    
+    i=0
+    j=0
+    
+    while i <= np.shape(cormat)[0]:
+        while j <= np.shape(cormat)[1]:
+            if cormat[i,j] > threshold:
+                redundant.append(j)
+                cormat=np.delete(cormat, j, 1)
+                
+            j+=1
+        i+=1
+    
+    non_redundant = [i for i in range(np.shape(data)[1]) if i not in redundant]
+    
+    return non_redundant
 
 
 class dataset:
@@ -105,7 +152,8 @@ class dataset:
         self.normalization_type = 'None'
 
         self.na_action_x = []
-            
+        self.problem = 'None'
+        
         #self.test = []
         #self.normalized_test_features = []
         
@@ -191,6 +239,17 @@ class dataset:
             
             set_to_norm = scaler.transform(set_to_norm)
             return set_to_norm, scaler
+        
+    def normalize_training(self):
+        normalized = self.normalize_set(self.training_set[0], self.na_action_x)
+        self.training_set = normalized[0], self.training_set[1]
+        self.scaler = normalized[1]
+        
+        
+        test_solve = solve_non_numeric(self.test_set[0], self.na_action_x)
+        self.test_set = self.scaler.transform(test_solve), self.test_set[1]
+        
+        
     
     #########################
     ### separate sets
@@ -265,9 +324,9 @@ class dataset:
                             if counter == ext_n:
                                 break
                      
-                     y_test = [i for i in range(len(self.y)) if i in set_sample]      
+                     y_test = [self.y[i] for i in range(len(self.y)) if i in set_sample]      
                      self.test_set = self.training_features.loc[set_sample], y_test
-                     y_training = [i for i in range(len(self.y)) if i not in set_sample]
+                     y_training = [self.y[i] for i in range(len(self.y)) if i not in set_sample]
                      self.training_set = self.training_features.drop(set_sample), y_training
                      
                
@@ -298,14 +357,50 @@ class dataset:
         self.external = external_compounds[external_compounds.columns[0]]
         self.external = self.external.tolist()
         
-    
-    
+    def normalize_external(self):
         
-      #########
-      ### Create Normalize training here
-      #########
-              
-     
+        external_solve = solve_non_numeric(self.external_features, self.na_action_x)
+        self.external_set = self.scaler.transform(external_solve)
+    
+      
+    #########
+    ### Feature selection
+    #########
+    def feature_selection(self, method, k):
+        selector = SelectKBest(method, k)
+        features = selector.fit_transform(self.training_set[0], self.training_set[1])
+        
+        feature_index = [i for i in range(len(selector.get_support())) if selector.get_support()[i] == True]
+        
+        column_names = list(pd.DataFrame(self.training_features).columns.values)
+        feature_names = [column_names[i] for i in feature_index] 
+        
+        
+        self.feature_selection = features, feature_index, feature_names
+        
+    def filter_selected_features_training(self):
+        self.training_set = self.training_set[0][:,self.feature_selection[1]], self.training_set[1]
+        self.test_set = self.test_set[0][:,self.feature_selection[1]], self.test_set[1]
+        
+    def filter_selected_features_external(self):
+        self.external_set = self.external_set[:,self.feature_selection[1]]
+        
+    
+    def remove_correlated_training(self, threshold):
+        
+        data = self.training_set[0]
+        
+        self.non_redundant = detect_correlated(data, threshold) 
+        
+        self.training_set = data[:,self.non_redundant], self.training_set[1]
+        self.test_set = data[:,self.non_redundant], self.test_set[1]
+
+    def remove_correlated_external(self):
+        
+        self.external_set = self.external_set[:,self.non_redundant]
+
+
+
 ###### Steps        
 
 bla=[]
@@ -316,6 +411,7 @@ compounds=compounds.append(compounds.loc[1])
 
 
 bla = dataset(compounds)
+bla.problem = 'regression'
 
 ### Set NA action
 bla.na_action_y('zero')
@@ -334,14 +430,32 @@ bla.calculate_features('mordred', 'training')
 
 
 #test=bla.normalize_set(bla.training_features,'mean')[0]
-clusters=[0,0,0,0,0,0,1,1,1,1,1,1]
+clusters=[0,0,0,0,0,0,1,1,1,2,2,2]
 bla.split_sets(True, 0.5, clusters)
 
 
 ## set normalization type and normalize training set
 bla.normalization_type = 'normalize'
 
-######## Finish normalization
+######## normalize training set and define scaler
+bla.normalize_training()
+
+####### Remove correlated
+### 
+
+bla.remove_correlated_training(threshold=0.9)
+
+### Selection
+bla.feature_selection(f_regression, 5)
+bla.filter_selected_features()
+
+
+####### load external data
+bla.load_external(compounds)
+bla.calculate_features('mordred', 'external')
+bla.normalize_external()
+bla.remove_correlated_external()
+bla.filter_selected_features_external()
 
 
 
@@ -351,6 +465,11 @@ bla.normalization_type = 'normalize'
 
 
 
+
+
+
+data = bla.training_set[0]
+threshold=0.9
 
 
 
