@@ -40,6 +40,8 @@ from sklearn.feature_selection import f_regression
 from sklearn.feature_selection import mutual_info_regression
 from sklearn.feature_selection import mutual_info_classif
 from sklearn.model_selection import train_test_split
+from sklearn.linear_model import LinearRegression
+from imblearn.over_sampling import SMOTE
 
 
 
@@ -47,94 +49,7 @@ compounds = pd.read_csv("~/virtual_screening_pipeline/compounds2.csv")
 
 
 
-#### calculate descriptors with mordred
-def calculate_mordred(mol):
-    
-    
-    mol_array = [rd.Chem.MolFromSmiles(m, sanitize=True) for m in mol]
-    calc = Calculator(descriptors, ignore_3D=True)
-    return calc.pandas(mol_array)
-       
-def solve_non_numeric(feature_dataframe, na_action):
-    #### Deal with non-numeric values
-    if na_action == 'mean':
-    
-        norm = feature_dataframe.to_numpy()
-        for j in range(np.shape(norm)[1]):
-            error = [i for i in range(np.shape(norm)[0]) if type(norm[i,j]) != float and type(norm[i,j]) != int]            
-            
-            ### action if all column if empty
-            if len(error) == np.shape(norm)[0]:
-                for to_replace in error:
-                    norm[to_replace][j] = 0
-            
-            ## else, calculate
-            else:
-                
-                to_av = [norm[i,j] for i in range(np.shape(norm)[0]) if i not in error]
-                col_av = np.mean(to_av)
-                
-                for to_replace in error:
-                    norm[to_replace][j] = col_av
-                    
-    if na_action == 'median':
-        norm = feature_dataframe.to_numpy()
-        for j in range(np.shape(norm)[1]):
-            error = [i for i in range(np.shape(norm)[0]) if type(norm[i,j]) != float and type(norm[i,j]) != int]            
-            
-            ### action if all column if empty
-            if len(error) == np.shape(norm)[0]:
-                for to_replace in error:
-                    norm[to_replace][j] = 0
-            
-            ## else, calculate
-            else:
-                
-                to_av = [norm[i,j] for i in range(np.shape(norm)[0]) if i not in error]
-                col_av = np.median(to_av)
-                
-                for to_replace in error:
-                    norm[to_replace][j] = col_av
-                
-    if na_action == 'zero':
-        norm = feature_dataframe.to_numpy()
-        for j in range(np.shape(norm)[1]):
-            error = [i for i in range(np.shape(norm)[0]) if type(norm[i,j]) != float and type(norm[i,j]) != int]            
-            
-            for to_replace in error:
-                norm[to_replace][j] = 0
-                
-    return norm
-    
-def detect_correlated(data, threshold):
-    
-    cormat=np.corrcoef(np.transpose(data))
-    for i in range(np.shape(cormat)[0]):
-        for j in range(np.shape(cormat)[1]):
-            if isnan(cormat[i,j]):
-                cormat[i,j] = 0
-            
-            if i == j:
-                cormat[i,j] = 0
-    
-    redundant = []
-    
-    
-    i=0
-    j=0
-    
-    while i <= np.shape(cormat)[0]:
-        while j <= np.shape(cormat)[1]:
-            if cormat[i,j] > threshold:
-                redundant.append(j)
-                cormat=np.delete(cormat, j, 1)
-                
-            j+=1
-        i+=1
-    
-    non_redundant = [i for i in range(np.shape(data)[1]) if i not in redundant]
-    
-    return non_redundant
+
 
 
 class dataset:
@@ -154,18 +69,10 @@ class dataset:
         self.na_action_x = []
         self.problem = 'None'
         
-        #self.test = []
-        #self.normalized_test_features = []
+        self.model_list = []
         
-        #self.training = []
-                
-        #self.training_features = []
-        #self.normalized_training_features = []
-                
-        #self.test_features = []
-                
-        
-        #self.scaler=[]
+        self.isbinary = 'False'
+
         
         
     ##########################
@@ -204,6 +111,7 @@ class dataset:
     
     def binarize(self, cutoff):
         self.binary = ['active' if a <= cutoff else 'inactive' for a in self.y]
+        self.isbinary = 'True'
 
     ##########################
     ### apply log to y
@@ -217,12 +125,62 @@ class dataset:
     ########################
     ### Normalization
     ########################
+    def solve_non_numeric(self,feature_dataframe, na_action):
+        #### Deal with non-numeric values
+        if na_action == 'mean':
+        
+            norm = feature_dataframe.to_numpy()
+            for j in range(np.shape(norm)[1]):
+                error = [i for i in range(np.shape(norm)[0]) if type(norm[i,j]) != float and type(norm[i,j]) != int]            
+                
+                ### action if all column if empty
+                if len(error) == np.shape(norm)[0]:
+                    for to_replace in error:
+                        norm[to_replace][j] = 0
+                
+                ## else, calculate
+                else:
+                    
+                    to_av = [norm[i,j] for i in range(np.shape(norm)[0]) if i not in error]
+                    col_av = np.mean(to_av)
+                    
+                    for to_replace in error:
+                        norm[to_replace][j] = col_av
+                        
+        if na_action == 'median':
+            norm = feature_dataframe.to_numpy()
+            for j in range(np.shape(norm)[1]):
+                error = [i for i in range(np.shape(norm)[0]) if type(norm[i,j]) != float and type(norm[i,j]) != int]            
+                
+                ### action if all column if empty
+                if len(error) == np.shape(norm)[0]:
+                    for to_replace in error:
+                        norm[to_replace][j] = 0
+                
+                ## else, calculate
+                else:
+                    
+                    to_av = [norm[i,j] for i in range(np.shape(norm)[0]) if i not in error]
+                    col_av = np.median(to_av)
+                    
+                    for to_replace in error:
+                        norm[to_replace][j] = col_av
+                    
+        if na_action == 'zero':
+            norm = feature_dataframe.to_numpy()
+            for j in range(np.shape(norm)[1]):
+                error = [i for i in range(np.shape(norm)[0]) if type(norm[i,j]) != float and type(norm[i,j]) != int]            
+                
+                for to_replace in error:
+                    norm[to_replace][j] = 0
+                    
+        return norm
     
     def normalize_set(self, set_to_norm, na_action):
         
         
         if self.normalization_type == 'normalize':
-            set_to_norm = solve_non_numeric(set_to_norm, na_action)
+            set_to_norm = self.solve_non_numeric(set_to_norm, na_action)
             
             scaler = MinMaxScaler()
             scaler.fit(set_to_norm)
@@ -232,7 +190,7 @@ class dataset:
         
         
         if self.normalization_type == 'standardize':
-            set_to_norm = solve_non_numeric(set_to_norm, na_action)
+            set_to_norm = self.solve_non_numeric(set_to_norm, na_action)
             
             scaler = StandardScaler()
             scaler.fit(set_to_norm)
@@ -246,7 +204,7 @@ class dataset:
         self.scaler = normalized[1]
         
         
-        test_solve = solve_non_numeric(self.test_set[0], self.na_action_x)
+        test_solve = self.solve_non_numeric(self.test_set[0], self.na_action_x)
         self.test_set = self.scaler.transform(test_solve), self.test_set[1]
         
         
@@ -256,7 +214,7 @@ class dataset:
     #########################
 
     
-    def split_sets(self, use_cluster, test_size, clusters=[]):
+    def split_sets(self, test_size, clusters=[], use_synthetic=False, use_cluster=False, smote_k=3):
        #### use_cluster - use clustering for creating the test set, if True, previous clustering analysis must be carried out
        #### training_size - size of the training set
        #### external_size - size of the external dataset, can be zero. In this case only training and validation are used
@@ -329,8 +287,21 @@ class dataset:
                      y_training = [self.y[i] for i in range(len(self.y)) if i not in set_sample]
                      self.training_set = self.training_features.drop(set_sample), y_training
                      
+        if use_synthetic == True and self.problem == 'classification':
+            oversample = SMOTE(k_neighbors=smote_k)
+            overs_training = oversample.fit_resample(self.training_set[0], self.training_set[1])
+            self.training_set = overs_training[0], overs_training[1]
+        
+        if use_synthetic == True and self.problem == 'regression':
+            print('Synthetic Sampling not implemented for regression yet')
                
-             
+    #### calculate descriptors with mordred
+    def calculate_mordred(self, mol):
+        
+        
+        mol_array = [rd.Chem.MolFromSmiles(m, sanitize=True) for m in mol]
+        calc = Calculator(descriptors, ignore_3D=True)
+        return calc.pandas(mol_array)    
 
     
     def calculate_features(self, feature_type, set_to_calc):
@@ -339,14 +310,14 @@ class dataset:
             #### check feature type
             if feature_type in ['mordred','amino']:
                 if feature_type == 'mordred':
-                    self.training_features = calculate_mordred(self.molecules)
+                    self.training_features = self.calculate_mordred(self.molecules)
                     
         if set_to_calc == 'external':       
         
             #### check feature type
             if feature_type in ['mordred','amino']:
                 if feature_type == 'mordred':
-                    self.external_features = calculate_mordred(self.external)
+                    self.external_features = self.calculate_mordred(self.external)
 
 
     
@@ -359,7 +330,7 @@ class dataset:
         
     def normalize_external(self):
         
-        external_solve = solve_non_numeric(self.external_features, self.na_action_x)
+        external_solve = self.solve_non_numeric(self.external_features, self.na_action_x)
         self.external_set = self.scaler.transform(external_solve)
     
       
@@ -386,11 +357,45 @@ class dataset:
         self.external_set = self.external_set[:,self.feature_selection[1]]
         
     
+            
+    def detect_correlated(self, data, threshold):
+        
+        #### Does not support dataframes
+        #### Feature dataset is converted to numpy array during normalization
+        
+        cormat=np.corrcoef(np.transpose(data))
+        for i in range(np.shape(cormat)[0]):
+            for j in range(np.shape(cormat)[1]):
+                if isnan(cormat[i,j]):
+                    cormat[i,j] = 0
+                
+                if i == j:
+                    cormat[i,j] = 0
+        
+        redundant = []
+        
+        
+        i=0
+        j=0
+        
+        while i <= np.shape(cormat)[0]:
+            while j <= np.shape(cormat)[1]:
+                if np.absolute(cormat[i,j]) > threshold:
+                    redundant.append(j)
+                    cormat=np.delete(cormat, j, 1)
+                    
+                j+=1
+            i+=1
+        
+        non_redundant = [i for i in range(np.shape(data)[1]) if i not in redundant]
+        
+        return non_redundant
+    
     def remove_correlated_training(self, threshold):
         
         data = self.training_set[0]
         
-        self.non_redundant = detect_correlated(data, threshold) 
+        self.non_redundant = self.detect_correlated(self.training_set[0], threshold) 
         
         self.training_set = data[:,self.non_redundant], self.training_set[1]
         self.test_set = data[:,self.non_redundant], self.test_set[1]
@@ -398,6 +403,13 @@ class dataset:
     def remove_correlated_external(self):
         
         self.external_set = self.external_set[:,self.non_redundant]
+        
+    
+    ################
+    #### create new model   
+    ################
+    
+            
 
 
 
@@ -431,7 +443,7 @@ bla.calculate_features('mordred', 'training')
 
 #test=bla.normalize_set(bla.training_features,'mean')[0]
 clusters=[0,0,0,0,0,0,1,1,1,2,2,2]
-bla.split_sets(True, 0.5, clusters)
+bla.split_sets(0.5, clusters, use_cluster=True, use_synthetic=True)
 
 
 ## set normalization type and normalize training set
@@ -447,16 +459,29 @@ bla.remove_correlated_training(threshold=0.9)
 
 ### Selection
 bla.feature_selection(f_regression, 5)
-bla.filter_selected_features()
+bla.filter_selected_features_training()
 
 
-####### load external data
+
+
+
+
+
+
+
+####### load and proccess external data
 bla.load_external(compounds)
 bla.calculate_features('mordred', 'external')
 bla.normalize_external()
 bla.remove_correlated_external()
 bla.filter_selected_features_external()
 
+###### Train models
+
+### Linear regression
+### Random Forest
+### Neural net
+### Gradient boost 
 
 
 
@@ -514,37 +539,7 @@ bla.split_sets(False, 0.5)
 
 #def plot_clusters(self):
     
-def normalize_training(self, na_action):
-    
-    if self.normalization_type == 'normalize':
-        tmp_training_features = solve_non_numeric(self.training_features, na_action)
-        
-        scaler = MinMaxScaler()
-        scaler.fit(tmp_training_features)
-        
-        self.normalized_training_features = scaler.transform(tmp_training_features)
-        self.scaler = scaler
-    
-    
-        tmp_test_features = solve_non_numeric(self.test_features, na_action)
-        self.normalized_test_features = scaler.transform(tmp_test_features)
 
-    
-    if self.normalization_type == 'standardize':
-        tmp_training_features = solve_non_numeric(self.training_features, na_action)
-        
-        scaler = StandardScaler()
-        scaler.fit(tmp_training_features)
-        
-        self.normalized_training_features = scaler.transform(tmp_training_features)
-        self.scaler = scaler
-    
-   
-def normalize_external(self, na_action):
-    tmp_external_features = solve_non_numeric(self.external_features, na_action)
-    scaler = self.scaler
-    self.normalized_external_features = scaler.transform(tmp_external_features)
-    
     
 def pca_set(self, n_components):
     
@@ -555,44 +550,4 @@ def pca_set(self, n_components):
     pca = PCA(n_components=n_components, svd_solver='arpack')
     self.pca_molecules = pca.fit(set_to_calc2)
     
-    
-    
-    
-
-    
-    
-def kmeans_scan_k(k_scan, by):
-    kmeans_model = KMeans()     # instantiating KMeans model
-    parameters = [k*by for k in range(2,k_scan)]
-    parameter_grid = ParameterGrid({'n_clusters': parameters})
-    silhouette_scores = []
-
-    for p in parameter_grid:
-        print(p)
-        data = np.transpose(self.pca_molecules.components_)
-        kmeans_model.set_params(**p)    # set current hyper parameter
-        kmeans_model.fit(data)
-        ss = silhouette_score(data, kmeans_model.labels_)   # calculate silhouette_score
-        silhouette_scores += [ss]       # store all the scores
-    
-    self.kmeans_scan = silhouette_scores, parameters
-    
-def kmeans(self, k):
-    kmeans_model = KMeans(n_clusters=k)     # instantiating KMeans model
-    
-    
-    data = np.transpose(self.pca_molecules.components_)
-    
-    kmeans_model.fit(data)
-    
-    self.cluster_labels = kmeans_model.labels_
-    
-def pca_set(set_to_calc, n_components):
-    
-    set_to_calc = self.normalize_set(set_to_calc, bla.na_action_x)[0]
-    
-    set_to_calc2 = np.transpose(set_to_calc)
-    
-    pca = PCA(n_components=n_components, svd_solver='arpack')
-    self.pca_molecules = pca.fit(set_to_calc2)
     
