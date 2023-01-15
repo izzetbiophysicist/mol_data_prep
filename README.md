@@ -1,7 +1,13 @@
-Easy applicability domain analysis, Machine learning and QSAR on HTC and virtual screening data. Can be used on peptide and small-molecules
+A class with handy methods for preparing datasets of molecules for Machine Learning procedures
+
+- Descriptor calculation using MORDRED (and soon also peptide descriptors)
+- Standardization
+- Binarization of response variable
+- Allows the use of clustering strategies to build more representative test sets
+- Easy introduction of synthetic datapoints through SMOTE
 
 # Usage
-
+In the "example" folder you can find a step by step example of a standard procedure
 
 # Citation
 
