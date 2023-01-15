@@ -4,7 +4,7 @@ A class with handy methods for preparing datasets of molecules for Machine Learn
 - Standardization
 - Binarization of response variable
 - Allows the use of clustering strategies to build more representative test sets
-- Easy introduction of synthetic datapoints through SMOTE
+- Easy introduction of synthetic datapoints through SMOTE (SMOGN soon to be added)
 
 # Usage
 In the "example" folder you can find a step by step example of a standard procedure
