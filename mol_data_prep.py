@@ -42,6 +42,7 @@ from sklearn.feature_selection import mutual_info_classif
 from sklearn.model_selection import train_test_split
 from sklearn.linear_model import LinearRegression
 from imblearn.over_sampling import SMOTE
+from sklearn.model_selection import GridSearchCV
 
 
 
@@ -242,8 +243,8 @@ class dataset:
                  test = sample_set(self.training_features, self.y, ext_n)
                  
                  ### returns external
-                 self.training_features = test[2], test[3]
-                 self.test_features = test[0], test[1]
+                 self.training_set = test[2], test[3]
+                 self.test_set = test[0], test[1]
         
 
         
@@ -404,150 +405,3 @@ class dataset:
         
         self.external_set = self.external_set[:,self.non_redundant]
         
-    
-    ################
-    #### create new model   
-    ################
-    
-            
-
-
-
-###### Steps        
-
-bla=[]
-#### Load dataset into object
-compounds = compounds.loc[1:9]
-compounds=compounds.append(compounds.loc[1])
-compounds=compounds.append(compounds.loc[1])
-
-
-bla = dataset(compounds)
-bla.problem = 'regression'
-
-### Set NA action
-bla.na_action_y('zero')
-bla.na_action_x = 'mean'
-
-### transform into log
-bla.log_y()
-
-## Binarize
-bla.binarize(30)
-
-
-
-### Split sets and calculate features for training set
-bla.calculate_features('mordred', 'training')
-
-
-#test=bla.normalize_set(bla.training_features,'mean')[0]
-clusters=[0,0,0,0,0,0,1,1,1,2,2,2]
-bla.split_sets(0.5, clusters, use_cluster=True, use_synthetic=True)
-
-
-## set normalization type and normalize training set
-bla.normalization_type = 'normalize'
-
-######## normalize training set and define scaler
-bla.normalize_training()
-
-####### Remove correlated
-### 
-
-bla.remove_correlated_training(threshold=0.9)
-
-### Selection
-bla.feature_selection(f_regression, 5)
-bla.filter_selected_features_training()
-
-
-
-
-
-
-
-
-
-####### load and proccess external data
-bla.load_external(compounds)
-bla.calculate_features('mordred', 'external')
-bla.normalize_external()
-bla.remove_correlated_external()
-bla.filter_selected_features_external()
-
-###### Train models
-
-### Linear regression
-### Random Forest
-### Neural net
-### Gradient boost 
-
-
-
-
-
-
-
-
-
-
-
-data = bla.training_set[0]
-threshold=0.9
-
-
-
-
-
-
-
-bla.pca_set(3)
-
-### Cluster
-bla.kmeans_scan_k(5,1)
-bla.kmeans(3)
-
-
-
-
-
-
-
-### Load external
-bla.load_external(compounds)
-bla.calculate_features('mordred','external')
-bla.normalize_external('mean')
-
-bla.split_sets(True, 0.1, [0,0,0,0,0,0,1,1,1,1,1,1])
-
-bla.plot_pca()
-
-bla.split_sets(False, 0.5)
-
-#kmeans_model = KMeans()     # instantiating KMeans model
-#parameters = [2, 3, 4]
-#parameter_grid = ParameterGrid({'n_clusters': parameters})
-#silhouette_scores = []
-
-#for p in parameter_grid:
-#    print(p)
-#    kmeans_model.set_params(**p)    # set current hyper parameter
-#    kmeans_model.fit(bla.pca_molecules)   
-#    ss = silhouette_score(bla.pca_molecules, kmeans_model.labels_)   # calculate silhouette_score
-#    silhouette_scores += [ss]       # store all the scores
-
-#def plot_clusters(self):
-    
-
-    
-def pca_set(self, n_components):
-    
-    set_to_calc = bla.normalize_set(bla.training_features, bla.na_action_x)[0]
-    
-    set_to_calc2 = np.transpose(set_to_calc)
-    
-    pca = PCA(n_components=n_components, svd_solver='arpack')
-    self.pca_molecules = pca.fit(set_to_calc2)
-    
-    
