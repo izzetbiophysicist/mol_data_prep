@@ -45,15 +45,7 @@ from imblearn.over_sampling import SMOTE
 from sklearn.model_selection import GridSearchCV
 
 
-
-compounds = pd.read_csv("~/virtual_screening_pipeline/compounds2.csv")
-
-
-
-
-
-
-class dataset:
+class mol_dataset:
     def __init__(self, compounds):
         self.molecules = compounds[compounds.columns[0]]
         self.molecules = self.molecules.tolist()
@@ -264,9 +256,9 @@ class dataset:
                      print('test samples =< clusters')
                  
                  else:
-                     ### loop over set
+                     
                                           
-                     ###### This part takes 1 sample from each cluster until the ext_n reaches zero
+                     ###### Takes 1 sample from each cluster until the ext_n reaches zero
                      
                      set_sample=[]
                      counter = 0
@@ -322,9 +314,6 @@ class dataset:
 
 
     
-    ############
-    #### SAVE NORMALIZATION DATA FOR TEST AND SCREENING SET NORMALIZATION
-    #############
     def load_external(self, external_compounds):
         self.external = external_compounds[external_compounds.columns[0]]
         self.external = self.external.tolist()
