@@ -16,6 +16,7 @@ compounds = pd.read_csv("~/virtual_screening_pipeline/compounds_test.csv")
 ###### Steps        
 
 #### Load molecule dataset into object, the csv should contain the molecules in the first column and the variable of interest in the second
+#### Descriptor calculation with mordred requires that the molecules are in smiles format
 
 dataset = mol_dataset(compounds)
 
