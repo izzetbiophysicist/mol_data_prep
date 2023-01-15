@@ -7,7 +7,7 @@ A class with handy methods for preparing datasets of molecules for Machine Learn
 - Easy introduction of synthetic datapoints through SMOTE (SMOGN soon to be added)
 
 # Usage
-In the "example" folder you can find a step by step example of a standard procedure
+In the "example" folder you can find a step by step example of a standard procedure for a classification problem
 
 # Citation
 
