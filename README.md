@@ -1,6 +1,6 @@
 A class with handy methods for preparing datasets of molecules for Machine Learning procedures
 
-- Descriptor calculation using MORDRED (peptide descriptors soon to be added)
+- Descriptor calculation using MORDRED (peptide descriptors and fingerprints soon to be added)
 - Standardization
 - Binarization of response variable
 - Allows the use of clustering strategies to build more representative test sets
