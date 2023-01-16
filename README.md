@@ -3,7 +3,7 @@ A class with handy methods for preparing datasets of molecules for Machine Learn
 - Descriptor calculation using MORDRED (peptide descriptors and fingerprints soon to be added)
 - Standardization
 - Binarization of response variable
-- Allows the use of clustering strategies to build more representative test sets
+- Allows clustering strategies to build more representative test sets
 - Easy introduction of synthetic datapoints through SMOTE (SMOGN soon to be added)
 
 # Usage
