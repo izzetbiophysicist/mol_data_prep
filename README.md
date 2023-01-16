@@ -11,6 +11,6 @@ In the "example" folder you can find a step by step example of a standard proced
 
 # Citation
 
-The pipeline was originally used in:
+A similar pipeline was originally used in:
 
 Machado, L. A., Krempser, E. and Guimarães, A. C. R - A machine learning-based virtual screening for natural compounds capable of inhibiting the HIV-1 integrase. Frontiers in Drug Discovery (2022)
