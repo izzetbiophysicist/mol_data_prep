@@ -1,3 +1,11 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+Created on Sun Jan 15 07:31:21 2023
+
+@author: lucas
+"""
+
 # -*- coding: utf-8 -*-
 """
 Spyder Editor
@@ -10,39 +18,22 @@ This is a temporary script file.
 import rdkit as rd
 from mordred import Calculator
 from mordred import descriptors
+from rdkit.Chem import MACCSkeys
+from rdkit import DataStructs
 
 ### Pandas, random and numpy
 import pandas as pd
 import numpy as np
 from random import sample
 
-from numpy.random import randint
-
 from math import isnan
-
-### Plot
-from matplotlib import pyplot
-from mpl_toolkits.mplot3d import Axes3D
-from matplotlib import pyplot as plt
 
 
 ### SKlearn
 from sklearn.preprocessing import MinMaxScaler
 from sklearn.preprocessing import StandardScaler
-from sklearn.cluster import KMeans
-from sklearn.decomposition import PCA
-from sklearn.metrics import silhouette_score
-from sklearn.model_selection import ParameterGrid
 from sklearn.feature_selection import SelectKBest 
-from sklearn.feature_selection import chi2
-from sklearn.feature_selection import f_classif
-from sklearn.feature_selection import f_regression
-from sklearn.feature_selection import mutual_info_regression
-from sklearn.feature_selection import mutual_info_classif
-from sklearn.model_selection import train_test_split
-from sklearn.linear_model import LinearRegression
 from imblearn.over_sampling import SMOTE
-from sklearn.model_selection import GridSearchCV
 
 
 class mol_dataset:
@@ -97,13 +88,109 @@ class mol_dataset:
             for cp in range(len(self.y)):
                 if self.y[cp] == 'Inf' or self.y[cp] == 'NA' or self.y[cp] == 'NaN' or self.y[cp] == '' or self.y[cp] == ' ':
                     self.y[cp] = median_y
-          
+    
+    ##########################
+    ### Deal with duplicates
+    ##########################
+    def remove_dups(self,representation, y_action):
+        if representation == "tanimoto":
+            mol_array = [rd.Chem.MolFromSmiles(m, sanitize=True) for m in self.molecules]
+            y = self.y
+            molecules = self.molecules
+            
+            fps = [MACCSkeys.GenMACCSKeys(x) for x in mol_array]
+            
+            unique_mols = []
+            unique_y = []
+            
+            i=0
+            while i != len(fps):
+                i_idents = []
+                j=0
+                while j != len(fps):
+                    if DataStructs.FingerprintSimilarity(fps[i],fps[j]) == 1 and i != j:
+                        i_idents.append(j)
+                    j+=1
+                    
+                ### add values for mol i
+                y_tmp = [y[i]]
+                unique_mols.append(molecules[i])
+
+                ### calculate median and remove mols
+                if len(i_idents) != 0:
+                    for to_remove in i_idents:
+                        y_tmp.append(y[to_remove])
+                        
+                    if y_action == 'median':
+                        unique_y.append(np.median(y_tmp))
+                    if y_action == 'mean':
+                        unique_y.append(np.mean(y_tmp))
+                    fps = [fps[q] for q in range(len(fps)) if q not in i_idents]
+                    molecules = [molecules[q] for q in range(len(molecules)) if q not in i_idents]
+                    y = [y[q] for q in range(len(y)) if q not in i_idents]
+
+                else:
+                    unique_y.append(y_tmp[0])
+                    
+
+        
+                i+=1
+                    
+        if representation == "string":
+            y = self.y
+            molecules = self.molecules
+            
+            fps = molecules
+            
+            unique_mols = []
+            unique_y = []
+            
+            i=0
+            while i != len(fps):
+                i_idents = []
+                j=0
+                while j != len(fps):
+                    if fps[i] == fps[j] and i != j:
+                        i_idents.append(j)
+                    j+=1
+           
+
+                
+                ### add values for mol i
+                y_tmp = [y[i]]
+                unique_mols.append(molecules[i])
+
+                ### calculate median and remove mols
+                if len(i_idents) != 0:
+                    for to_remove in i_idents:
+                        y_tmp.append(y[to_remove])
+                        
+                    if y_action == 'median':
+                        unique_y.append(np.median(y_tmp))
+                    if y_action == 'mean':
+                        unique_y.append(np.mean(y_tmp))
+                    fps = [fps[q] for q in range(len(fps)) if q not in i_idents]
+                    molecules = [molecules[q] for q in range(len(molecules)) if q not in i_idents]
+                    y = [y[q] for q in range(len(y)) if q not in i_idents]
+
+                else:
+                    unique_y.append(y_tmp[0])
+                    
+
+        
+        
+                i+=1
+        self.molecules = unique_mols
+        self.y = unique_y
+            
+    
+    
     ##########################
     ### Binarize data for classification
     ##########################
     
     def binarize(self, cutoff):
-        self.binary = ['active' if a <= cutoff else 'inactive' for a in self.y]
+        self.y = [0 if a <= cutoff else 1 for a in self.y]
         self.isbinary = 'True'
 
     ##########################
@@ -113,7 +200,7 @@ class mol_dataset:
     def log_y(self):
         self.y = [np.log(a) for a in self.y]   
         
-        
+    
         
     ########################
     ### Normalization
