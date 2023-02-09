@@ -12,11 +12,9 @@ from sklearn.feature_selection import mutual_info_classif
 
 compounds = pd.read_csv("~/virtual_screening_pipeline/compounds_test.csv")
 
-
 ###### Steps        
 
 #### Load molecule dataset into object, the csv should contain the molecules in the first column and the variable of interest in the second
-#### Descriptor calculation with mordred requires that the molecules are in smiles format
 
 dataset = mol_dataset(compounds)
 
@@ -28,6 +26,13 @@ dataset.problem = 'classification'
 
 dataset.na_action_y('zero')
 dataset.na_action_x = 'mean'
+
+
+##### deal with duplicates removing all molecules that have identical tanimoto coefficient
+##### can also be used to remove molecules have identical smiles using 'string' instead of 'tanimoto'
+##### the y value of the duplicates is compressed into a single value using the 'mean' or the 'median' of the y values
+dataset.remove_dups('tanimoto', 'median')
+
 
 ### transform into y into log(y)
 
