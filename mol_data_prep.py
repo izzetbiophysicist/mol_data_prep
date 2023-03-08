@@ -34,7 +34,45 @@ from sklearn.preprocessing import MinMaxScaler
 from sklearn.preprocessing import StandardScaler
 from sklearn.feature_selection import SelectKBest 
 from imblearn.over_sampling import SMOTE
+from sklearn.cluster import KMeans
+from sklearn.decomposition import PCA
 
+def pca_dataset(dataset, dimensions):
+    dimensions = 3
+    
+    pca_features = PCA(n_components=dimensions)
+    principalComponents_features = pca_features.fit_transform(dataset)
+    
+    pca_features_all = PCA(n_components=np.shape(dataset)[0])
+    principalComponents_features_all = pca_features_all.fit_transform(dataset)
+    
+    
+    principalComponents_features
+    np.shape(principalComponents_features_all)
+    
+    x=0
+    explained_variance = [x+pca_features.explained_variance_[i]/np.sum(pca_features_all.explained_variance_) for i in range(dimensions)]
+    explained_variance = np.sum(explained_variance)
+    
+    return principalComponents_features, explained_variance
+
+
+def kmeans_screen(dataset, cluster_range, alpha):
+    
+    inertia_list = []
+    
+    for i in range(cluster_range):
+        kmeans = KMeans(init="random", n_clusters=i+1, n_init=10, max_iter=300, random_state=42)
+        kmeans.fit(dataset)
+        
+        inertia_list.append(kmeans.inertia_)
+        
+    
+    scaled_inertia = [(inertia_list[k]/inertia_list[0])*alpha*(k+1) for k in range(cluster_range)]
+        
+    
+    ## it returns the index of the best number of clusters, it should be corrected in the KMeans function by adding 1
+    return np.argmin(scaled_inertia)
 
 class mol_dataset:
     def __init__(self, compounds):
@@ -345,19 +383,22 @@ class mol_dataset:
                  else:
                      
                                           
-                     ###### Takes 1 sample from each cluster until the ext_n reaches zero
-                     
                      set_sample=[]
                      counter = 0
                      #### Equally distributed among clusters
-                
+                     cluster_index = [i for i in range(len(clusters))]
+                     
                      while counter != ext_n:
                         for current_cl in cluster_set:
-                            cl_mols = [i for i in range(len(clusters)) if clusters[i] == current_cl]
+                            cl_mols = [i for i in range(len(clusters)) if clusters[i] == current_cl and i in cluster_index]
                             sampled = sample(cl_mols, 1)[0]
                             set_sample.append(sampled)
                             cl_mols = [cl_mols[i] for i in range(len(cl_mols)) if cl_mols[i] != sampled]
+                            #cl_mols = [cl_mols[x] for x in range(len(cl_mols)) if cl_mols[x] not in sampled]
                             counter+=1
+                            
+                            cluster_index = [cluster_index[i] for i in range(len(cluster_index)) if cluster_index[i] != sampled]
+                    
                             
                             if counter == ext_n:
                                 break
