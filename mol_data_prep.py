@@ -511,12 +511,13 @@ class mol_dataset:
     
     def remove_correlated_training(self, threshold):
         
-        data = self.training_set[0]
+        data_training = self.training_set[0]
+        data_test = self.test_set[0]
         
         self.non_redundant = self.detect_correlated(self.training_set[0], threshold) 
         
-        self.training_set = data[:,self.non_redundant], self.training_set[1]
-        self.test_set = data[:,self.non_redundant], self.test_set[1]
+        self.training_set = data_training[:,self.non_redundant], self.training_set[1]
+        self.test_set = data_test[:,self.non_redundant], self.test_set[1]
 
     def remove_correlated_external(self):
         
