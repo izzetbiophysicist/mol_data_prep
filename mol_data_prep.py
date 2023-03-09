@@ -28,6 +28,9 @@ from random import sample
 
 from math import isnan
 
+# copy
+import copy
+
 
 ### SKlearn
 from sklearn.preprocessing import MinMaxScaler
@@ -246,10 +249,15 @@ class mol_dataset:
     def solve_non_numeric(self,feature_dataframe, na_action):
         #### Deal with non-numeric values
         if na_action == 'mean':
-        
-            norm = feature_dataframe.to_numpy()
+            
+            if isinstance(feature_dataframe, np.ndarray) == False:
+                norm = copy.deepcopy(feature_dataframe.to_numpy())
+            else:
+                norm = copy.deepcopy(feature_dataframe)
+            
+            
             for j in range(np.shape(norm)[1]):
-                error = [i for i in range(np.shape(norm)[0]) if type(norm[i,j]) != float and type(norm[i,j]) != int]            
+                error = [i for i in range(np.shape(norm)[0]) if type(norm[i,j]) != float and type(norm[i,j]) != int and isinstance(norm[i,j], np.float64) != True]            
                 
                 ### action if all column if empty
                 if len(error) == np.shape(norm)[0]:
@@ -268,7 +276,7 @@ class mol_dataset:
         if na_action == 'median':
             norm = feature_dataframe.to_numpy()
             for j in range(np.shape(norm)[1]):
-                error = [i for i in range(np.shape(norm)[0]) if type(norm[i,j]) != float and type(norm[i,j]) != int]            
+                error = [i for i in range(np.shape(norm)[0]) if type(norm[i,j]) != float and type(norm[i,j]) != int and isinstance(norm[i,j], np.float64) != True]            
                 
                 ### action if all column if empty
                 if len(error) == np.shape(norm)[0]:
@@ -287,7 +295,7 @@ class mol_dataset:
         if na_action == 'zero':
             norm = feature_dataframe.to_numpy()
             for j in range(np.shape(norm)[1]):
-                error = [i for i in range(np.shape(norm)[0]) if type(norm[i,j]) != float and type(norm[i,j]) != int]            
+                error = [i for i in range(np.shape(norm)[0]) if type(norm[i,j]) != float and type(norm[i,j]) != int and isinstance(norm[i,j], np.float64) != True]            
                 
                 for to_replace in error:
                     norm[to_replace][j] = 0
@@ -332,7 +340,7 @@ class mol_dataset:
     #########################
 
     
-    def split_sets(self, test_size, clusters=[], use_synthetic=False, use_cluster=False, smote_k=3):
+    def split_sets(self, test_size, clusters=[], use_cluster=False):
        #### use_cluster - use clustering for creating the test set, if True, previous clustering analysis must be carried out
        #### training_size - size of the training set
        #### external_size - size of the external dataset, can be zero. In this case only training and validation are used
@@ -407,15 +415,16 @@ class mol_dataset:
                      self.test_set = self.training_features.loc[set_sample], y_test
                      y_training = [self.y[i] for i in range(len(self.y)) if i not in set_sample]
                      self.training_set = self.training_features.drop(set_sample), y_training
-                     
-        if use_synthetic == True and self.problem == 'classification':
-            oversample = SMOTE(k_neighbors=smote_k)
-            overs_training = oversample.fit_resample(self.training_set[0], self.training_set[1])
-            self.training_set = overs_training[0], overs_training[1]
         
-        if use_synthetic == True and self.problem == 'regression':
+    def synthetic(self, smote_k=3):
+    
+        oversample = SMOTE(k_neighbors=smote_k)
+        overs_training = oversample.fit_resample(self.training_set[0], self.training_set[1])
+        self.training_set = overs_training[0], overs_training[1]
+        
+        if self.problem == 'regression':
             print('Synthetic Sampling not implemented for regression yet')
-               
+                   
     #### calculate descriptors with mordred
     def calculate_mordred(self, mol):
         
