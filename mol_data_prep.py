@@ -41,7 +41,6 @@ from sklearn.cluster import KMeans
 from sklearn.decomposition import PCA
 
 def pca_dataset(dataset, dimensions):
-    dimensions = 3
     
     pca_features = PCA(n_components=dimensions)
     principalComponents_features = pca_features.fit_transform(dataset)
@@ -50,7 +49,6 @@ def pca_dataset(dataset, dimensions):
     principalComponents_features_all = pca_features_all.fit_transform(dataset)
     
     
-    principalComponents_features
     np.shape(principalComponents_features_all)
     
     x=0
