@@ -31,7 +31,6 @@ from math import isnan
 # copy
 import copy
 
-
 ### SKlearn
 from sklearn.preprocessing import MinMaxScaler
 from sklearn.preprocessing import StandardScaler
@@ -39,8 +38,11 @@ from sklearn.feature_selection import SelectKBest
 from imblearn.over_sampling import SMOTE
 from sklearn.cluster import KMeans
 from sklearn.decomposition import PCA
+from sklearn.feature_selection import mutual_info_classif
+
 
 def pca_dataset(dataset, dimensions):
+    dimensions = 3
     
     pca_features = PCA(n_components=dimensions)
     principalComponents_features = pca_features.fit_transform(dataset)
@@ -49,6 +51,7 @@ def pca_dataset(dataset, dimensions):
     principalComponents_features_all = pca_features_all.fit_transform(dataset)
     
     
+    principalComponents_features
     np.shape(principalComponents_features_all)
     
     x=0
@@ -433,7 +436,7 @@ class mol_dataset:
 
     
     def calculate_features(self, feature_type, set_to_calc):
-        if set_to_calc == 'training':      
+        if set_to_calc == 'train_test':      
         
             #### check feature type
             if feature_type in ['mordred','amino']:
@@ -463,7 +466,7 @@ class mol_dataset:
     ### Feature selection
     #########
     def feature_selection(self, method, k):
-        selector = SelectKBest(method, k)
+        selector = SelectKBest(method, k=k)
         features = selector.fit_transform(self.training_set[0], self.training_set[1])
         
         feature_index = [i for i in range(len(selector.get_support())) if selector.get_support()[i] == True]
@@ -483,45 +486,73 @@ class mol_dataset:
         
     
             
-    def detect_correlated(self, data, threshold):
+
+    def detect_correlated(self, threshold):
+        """
+        Detect and remove highly correlated features in the given dataset.
+    
+        Parameters:
+        - data (numpy.ndarray): The feature dataset. Note: This method does not support dataframes.
+        - target (numpy.ndarray): The target variable.
+        - threshold (float): The correlation threshold above which features are considered redundant.
+    
+        Returns:
+        - non_redundant (list): List of indices of non-redundant features.
+        """
+    
+        # Does not support dataframes
+        # Feature dataset is converted to numpy array during normalization
         
-        #### Does not support dataframes
-        #### Feature dataset is converted to numpy array during normalization
-        
-        cormat=np.corrcoef(np.transpose(data))
+        cormat = np.corrcoef(np.transpose(self.training_set[0]))
+        mi_scores = mutual_info_classif(self.training_set[0], self.training_set[1])
+    
+        # Replace NaN values with 0 and set diagonal elements to 0
         for i in range(np.shape(cormat)[0]):
             for j in range(np.shape(cormat)[1]):
-                if isnan(cormat[i,j]):
-                    cormat[i,j] = 0
-                
+                if np.isnan(cormat[i, j]):
+                    cormat[i, j] = 0
+    
                 if i == j:
-                    cormat[i,j] = 0
-        
+                    cormat[i, j] = 0
+    
         redundant = []
-        
-        
-        i=0
-        j=0
-        
-        while i <= np.shape(cormat)[0]:
-            while j <= np.shape(cormat)[1]:
-                if np.absolute(cormat[i,j]) > threshold:
-                    redundant.append(j)
-                    cormat=np.delete(cormat, j, 1)
-                    
-                j+=1
-            i+=1
-        
-        non_redundant = [i for i in range(np.shape(data)[1]) if i not in redundant]
-        
+    
+        i = 0
+        j = 0
+    
+        # Detect and mark highly correlated features
+        while i < np.shape(cormat)[0]:
+            j = i + 1  # Start from the next column to avoid self-correlation
+            while j < np.shape(cormat)[1]:
+                if np.absolute(cormat[i, j]) >= threshold:
+                    print('Found correlated')
+
+                    # Calculate mutual information scores for the features involved
+                    mi_feature_i = mi_scores[i]
+                    mi_feature_j = mi_scores[j]
+
+                    # Append the feature with the higher mutual information
+                    if mi_feature_i > mi_feature_j:
+                        print('higher')
+                        redundant.append(j)
+                    else:
+                        redundant.append(i)
+
+                j += 1
+            i += 1
+    
+        # Determine non-redundant feature indices
+        non_redundant = [i for i in range(np.shape(self.training_set[0])[1]) if i not in redundant]
+    
         return non_redundant
     
     def remove_correlated_training(self, threshold):
         
+        
         data_training = self.training_set[0]
         data_test = self.test_set[0]
         
-        self.non_redundant = self.detect_correlated(self.training_set[0], threshold) 
+        self.non_redundant = self.detect_correlated(threshold) 
         
         self.training_set = data_training[:,self.non_redundant], self.training_set[1]
         self.test_set = data_test[:,self.non_redundant], self.test_set[1]
@@ -529,4 +560,6 @@ class mol_dataset:
     def remove_correlated_external(self):
         
         self.external_set = self.external_set[:,self.non_redundant]
+        
+
         
