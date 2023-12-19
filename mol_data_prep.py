@@ -99,7 +99,16 @@ class mol_dataset:
         
         self.isbinary = 'False'
 
+    
+    def clean_smiles(self):
+        ### cleans smiles which cannot be processed in further steps
+        mol_array = [rd.Chem.MolFromSmiles(m, sanitize=True) for m in self.molecules]
+        none_indices = [i for i, x in enumerate(mol_array) if x is None]
         
+        self.molecules = [self.molecules[x] for x in range(len(self.molecules)) if x not in none_indices]
+        self.y = [self.y[x] for x in range(len(self.y)) if x not in none_indices]
+
+    
         
     ##########################
     ### Define what to do to NA, NaN and Inf values
@@ -525,7 +534,6 @@ class mol_dataset:
             j = i + 1  # Start from the next column to avoid self-correlation
             while j < np.shape(cormat)[1]:
                 if np.absolute(cormat[i, j]) >= threshold:
-                    print('Found correlated')
 
                     # Calculate mutual information scores for the features involved
                     mi_feature_i = mi_scores[i]
@@ -533,7 +541,6 @@ class mol_dataset:
 
                     # Append the feature with the higher mutual information
                     if mi_feature_i > mi_feature_j:
-                        print('higher')
                         redundant.append(j)
                     else:
                         redundant.append(i)
@@ -560,6 +567,4 @@ class mol_dataset:
     def remove_correlated_external(self):
         
         self.external_set = self.external_set[:,self.non_redundant]
-        
-
         
