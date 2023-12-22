@@ -42,7 +42,6 @@ from sklearn.feature_selection import mutual_info_classif
 
 
 def pca_dataset(dataset, dimensions):
-    dimensions = 3
     
     pca_features = PCA(n_components=dimensions)
     principalComponents_features = pca_features.fit_transform(dataset)
