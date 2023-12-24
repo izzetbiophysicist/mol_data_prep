@@ -13,7 +13,7 @@ import pandas as pd
 
 os.chdir('/home/lucas/virtual_screening_pipeline/') 
 
-from mol_data_prep_6 import *
+from mol_data_prep_9 import *
 
 #### Sklearn
 from sklearn.model_selection import GridSearchCV
@@ -71,20 +71,20 @@ def run_dataset(compounds):
     #### if clusters=True is used the test set will be taken equally from each cluster
     dataset.calculate_features('mordred', 'train_test')
     
-    to_cluster = dataset.training_features
+    #to_cluster = dataset.training_features
     
-    to_cluster_solved = dataset.solve_non_numeric(to_cluster, na_action='mean')
-    
-    
-    scaler = StandardScaler()
-    scaler.fit(to_cluster_solved)
-    to_cluster_norm = scaler.transform(to_cluster_solved)
-    
-    to_cluster_PCA = pca_dataset(to_cluster_norm, 3)
+    #to_cluster_solved = dataset.solve_non_numeric(to_cluster, na_action='mean')
     
     
-    kmeans = KMeans(init="random", n_clusters=kmeans_screen(to_cluster_PCA[0], 50, 20)+1, n_init=10, max_iter=300, random_state=42)
-    kclust = kmeans.fit(to_cluster_PCA[0])
+    #scaler = StandardScaler()
+    #scaler.fit(to_cluster_solved)
+    #to_cluster_norm = scaler.transform(to_cluster_solved)
+    
+    #to_cluster_PCA = pca_dataset(to_cluster_norm, dimensions=3)
+    
+    
+    #kmeans = KMeans(init="random", n_clusters=kmeans_screen(to_cluster_PCA[0], 50, 20)+1, n_init=10, max_iter=300, random_state=42)
+    #kclust = kmeans.fit(to_cluster_PCA[0])
     
     
     
@@ -92,7 +92,7 @@ def run_dataset(compounds):
     
     
     ### split_sets
-    dataset.split_sets(0.2, clusters=kclust.labels_, use_cluster=True)
+    dataset.split_sets(0.2)
     dataset.training_set = dataset.solve_non_numeric(dataset.training_set[0], na_action='mean'), dataset.training_set[1]
     
     sample_strategies = ['none','smote']
