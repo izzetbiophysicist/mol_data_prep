@@ -20,7 +20,7 @@ from mordred import Calculator
 from mordred import descriptors
 from rdkit.Chem import MACCSkeys
 from rdkit import DataStructs
-
+from sklearn.model_selection import train_test_split
 ### Pandas, random and numpy
 import pandas as pd
 import numpy as np
@@ -46,16 +46,7 @@ def pca_dataset(dataset, dimensions):
     pca_features = PCA(n_components=dimensions)
     principalComponents_features = pca_features.fit_transform(dataset)
     
-    pca_features_all = PCA(n_components=np.shape(dataset)[0])
-    principalComponents_features_all = pca_features_all.fit_transform(dataset)
-    
-    
-    principalComponents_features
-    np.shape(principalComponents_features_all)
-    
-    x=0
-    explained_variance = [x+pca_features.explained_variance_[i]/np.sum(pca_features_all.explained_variance_) for i in range(dimensions)]
-    explained_variance = np.sum(explained_variance)
+    explained_variance = 0
     
     return principalComponents_features, explained_variance
 
@@ -265,10 +256,13 @@ class mol_dataset:
                 norm = copy.deepcopy(feature_dataframe)
             
             
+            norm = norm.astype(np.float64)
+
+            
             for j in range(np.shape(norm)[1]):
-                error = [i for i in range(np.shape(norm)[0]) if type(norm[i,j]) != float and type(norm[i,j]) != int and isinstance(norm[i,j], np.float64) != True]            
-                
-                ### action if all column if empty
+                #error = [i for i in range(np.shape(norm)[0]) if type(norm[i,j]) != float and type(norm[i,j]) != int and isinstance(norm[i,j], np.float64) != True]            
+                error = [i for i in range(np.shape(norm)[0]) if np.isnan(norm[i,j]) == True]            
+                ### action if all column is empty
                 if len(error) == np.shape(norm)[0]:
                     for to_replace in error:
                         norm[to_replace][j] = 0
@@ -277,16 +271,22 @@ class mol_dataset:
                 else:
                     
                     to_av = [norm[i,j] for i in range(np.shape(norm)[0]) if i not in error]
-                    col_av = np.mean(to_av)
+                    to_av = [i for i in to_av if np.isnan(i) == False]
+                    col_av = np.median(to_av).astype(np.float64)
                     
                     for to_replace in error:
                         norm[to_replace][j] = col_av
                         
         if na_action == 'median':
-            norm = feature_dataframe.to_numpy()
+            
+            norm = norm.astype(np.float64)
+
+            
+            #norm = feature_dataframe.to_numpy()
             for j in range(np.shape(norm)[1]):
-                error = [i for i in range(np.shape(norm)[0]) if type(norm[i,j]) != float and type(norm[i,j]) != int and isinstance(norm[i,j], np.float64) != True]            
-                
+                #error = [i for i in range(np.shape(norm)[0]) if type(norm[i,j]) != float and type(norm[i,j]) != int and isinstance(norm[i,j], np.float64) != True]            
+                error = [i for i in range(np.shape(norm)[0]) if np.isnan(norm[i,j]) == True]            
+
                 ### action if all column if empty
                 if len(error) == np.shape(norm)[0]:
                     for to_replace in error:
@@ -296,16 +296,22 @@ class mol_dataset:
                 else:
                     
                     to_av = [norm[i,j] for i in range(np.shape(norm)[0]) if i not in error]
-                    col_av = np.median(to_av)
+                    to_av = [i for i in to_av if np.isnan(i) == False]
+                    col_av = np.median(to_av).astype(np.float64)
                     
                     for to_replace in error:
-                        norm[to_replace][j] = col_av
+                        norm[to_replace,j] = col_av
                     
         if na_action == 'zero':
-            norm = feature_dataframe.to_numpy()
+            
+            norm = norm.astype(np.float64)
+
+            
+            #norm = feature_dataframe.to_numpy()
             for j in range(np.shape(norm)[1]):
-                error = [i for i in range(np.shape(norm)[0]) if type(norm[i,j]) != float and type(norm[i,j]) != int and isinstance(norm[i,j], np.float64) != True]            
-                
+                #error = [i for i in range(np.shape(norm)[0]) if type(norm[i,j]) != float and type(norm[i,j]) != int and isinstance(norm[i,j], np.float64) != True]            
+                error = [i for i in range(np.shape(norm)[0]) if np.isnan(norm[i,j]) == True]            
+
                 for to_replace in error:
                     norm[to_replace][j] = 0
                     
@@ -349,81 +355,11 @@ class mol_dataset:
     #########################
 
     
-    def split_sets(self, test_size, clusters=[], use_cluster=False):
-       #### use_cluster - use clustering for creating the test set, if True, previous clustering analysis must be carried out
-       #### training_size - size of the training set
-       #### external_size - size of the external dataset, can be zero. In this case only training and validation are used
-        def sample_set(features, y, size):
-            ##### Sample external
-            set_sample = sample(range(len(features)), size)
-            
-            mol_sample = features.iloc[set_sample,]
-            y_sample = [y[a] for a in set_sample]
-            
-            rest = [i for i in range(len(features)) if i not in set_sample]
-            rest_mol = features.iloc[rest,]
-            rest_y = [y[a] for a in range(len(y)) if a not in set_sample]
-            
-            return mol_sample, y_sample, rest_mol, rest_y
-        
-            #### Separate sets without clustering
+    def split_sets(self, t_size):
+        X_train, X_test, y_train, y_test = train_test_split(self.training_features, self.y, test_size=t_size, random_state=42)    
            
-        if use_cluster == False:
-            if test_size > 0:
-                 ### sample external set
-                 ext_n = round(test_size*len(self.training_features))
-                 
-                 
-                 test = sample_set(self.training_features, self.y, ext_n)
-                 
-                 ### returns external
-                 self.training_set = test[2], test[3]
-                 self.test_set = test[0], test[1]
-        
-
-        
-            
-        if use_cluster == True:
-            if len(clusters) != len(self.training_features):
-                print('cluster vector does not match the dataset')
-            
-            if test_size > 0:
-                
-                 ### test N
-                 ext_n = round(test_size*len(self.training_features))
-                 
-                 cluster_set = set(clusters)
-                 
-                 if ext_n < len(cluster_set):
-                     print('test samples =< clusters')
-                 
-                 else:
-                     
-                                          
-                     set_sample=[]
-                     counter = 0
-                     #### Equally distributed among clusters
-                     cluster_index = [i for i in range(len(clusters))]
-                     
-                     while counter != ext_n:
-                        for current_cl in cluster_set:
-                            cl_mols = [i for i in range(len(clusters)) if clusters[i] == current_cl and i in cluster_index]
-                            sampled = sample(cl_mols, 1)[0]
-                            set_sample.append(sampled)
-                            cl_mols = [cl_mols[i] for i in range(len(cl_mols)) if cl_mols[i] != sampled]
-                            #cl_mols = [cl_mols[x] for x in range(len(cl_mols)) if cl_mols[x] not in sampled]
-                            counter+=1
-                            
-                            cluster_index = [cluster_index[i] for i in range(len(cluster_index)) if cluster_index[i] != sampled]
-                    
-                            
-                            if counter == ext_n:
-                                break
-                     
-                     y_test = [self.y[i] for i in range(len(self.y)) if i in set_sample]      
-                     self.test_set = self.training_features.loc[set_sample], y_test
-                     y_training = [self.y[i] for i in range(len(self.y)) if i not in set_sample]
-                     self.training_set = self.training_features.drop(set_sample), y_training
+        self.test_set = X_test, y_test
+        self.training_set = X_train, y_train
         
     def synthetic(self, smote_k=3):
     
