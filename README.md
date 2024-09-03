@@ -1,4 +1,7 @@
-A class with handy methods for preparing datasets of molecules for Machine Learning procedures
+# Overview
+mol_data_prep is comprised of R and Python scripts for streamlining the preparation of molecular datasets for machine learning tasks. It provides methods for descriptor calculation, dataset standardization, response variable binarization, clustering for test set selection, and synthetic data generation using SMOTE.
+
+The main script provides a class with handy methods for preparing datasets of molecules for Machine Learning procedures
 
 - Descriptor calculation using MORDRED (peptide descriptors and fingerprints soon to be added)
 - Standardization
